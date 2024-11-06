@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>우산 대여 시스템</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 컨테이너 -->
+    <div class="container">
+        <!-- 지도 -->
+        <div id="map"></div>
+
+        <!-- 대여소 목록 -->
+        <div class="station-list">
+            <h2>대여소 목록</h2>
+            <input type="text" class="search-box" placeholder="대여소 검색..." oninput="filterStations(event)">
+            <div id="station-list"></div>
+        </div>
+
+        <!-- 커뮤니티 폼 -->
+        <div class="community-form">
+            <h2>문의 사항</h2>
+            <textarea id="comment" class="comment-box" placeholder="문의 사항을 남겨주세요..."></textarea>
+            <button class="submit-btn" onclick="submitComment()">댓글 남기기</button>
+
+            <div class="comments-list" id="comments-list"></div>
+        </div>
+    </div>
+
+    <!-- Kakao Maps API 불러오기 -->
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=21e928762351d4f0aaee4c188c5f87a8"></script>
+    <script>
+        var mapContainer = document.getElementById('map');
+        var mapOption = { 
+            center: new kakao.maps.LatLng(37.5665, 126.9780), // 서울 시청
+            level: 3
+        };
+        var map = new kakao.maps.Map(mapContainer, mapOption); 
+
+        // 대여소 정보
+        var rentalStations = [
+            { name: "서울 시청역 대여소", lat: 37.5665, lng: 126.9779, umbrellas: 5 },
+            { name: "을지로 입구역 대여소", lat: 37.5660, lng: 126.9827, umbrellas: 3 },
+            { name: "덕수궁 버스정류장 대여소", lat: 37.5655, lng: 126.9769, umbrellas: 4 },
+            { name: "종각역 대여소", lat: 37.5700, lng: 126.9835, umbrellas: 2 },
+            { name: "서울역 편의점 대여소", lat: 37.5547, lng: 126.9706, umbrellas: 6 },
+            { name: "효창공원", lat: 37.545224, lng: 126.960324, umbrellas: 30},
+            { name: "N서울타워", lat: 37.549819, lng: 126.989297, umbrellas: 40}
+        ];
+
+        // 마커와 대여소 리스트 초기화
+        rentalStations.forEach(station => addMarkerAndStation(station));
+
+        // 마커와 대여소 목록 아이템 생성
+        function addMarkerAndStation(station) {
+            // 지도에 마커 추가
+            var marker = new kakao.maps.Marker({
+                position: new kakao.maps.LatLng(station.lat, station.lng),
+                map: map
+            });
+
+            // 대여소 목록에 추가
+            var stationItem = document.createElement('div');
+            stationItem.classList.add('station-item');
+            stationItem.innerHTML = station.name;
+            stationItem.onclick = function() { selectStation(station); };
+            document.getElementById('station-list').appendChild(stationItem);
+
+            // 마커 클릭 시 예약 현황과 버튼 표시
+            kakao.maps.event.addListener(marker, 'click', function() {
+                var content = `<div class="info-window">
+                                <strong>${station.name}</strong><br>
+                                대여 가능 우산: ${station.umbrellas}개<br>
+                                <button class="reserve-button" onclick="reserveUmbrella(${rentalStations.indexOf(station)})">
+                                  예약하기
+                                </button>
+                               </div>`;
+
+                var infoWindow = new kakao.maps.InfoWindow({
+                    content: content,
+                    removable: true
+                });
+                infoWindow.open(map, marker);
+            });
+        }
+
+        // 대여소 선택 시 지도 위치로 이동
+        function selectStation(station) {
+            var moveLatLon = new kakao.maps.LatLng(station.lat, station.lng);
+            map.panTo(moveLatLon);
+        }
+
+        // 예약 기능
+        function reserveUmbrella(index) {
+            var station = rentalStations[index];
+            if (station.umbrellas > 0) {
+                station.umbrellas--;
+                alert(`${station.name}에서 우산 예약이 완료되었습니다.\n남은 우산: ${station.umbrellas}개`);
+            } else {
+                alert("해당 대여소에 남은 우산이 없습니다.");
+            }
+        }
+
+        // 대여소 검색 기능
+        function filterStations(event) {
+            var searchTerm = event.target.value.toLowerCase();
+            var stationItems = document.querySelectorAll('.station-item');
+            stationItems.forEach(item => {
+                item.style.display = item.innerText.toLowerCase().includes(searchTerm) ? 'block' : 'none';
+            });
+        }
+
+        // 댓글 작성
+        function submitComment() {
+            var commentText = document.getElementById('comment').value.trim();
+            if (commentText) {
+                var commentItem = document.createElement('div');
+                commentItem.classList.add('comment-item');
+                commentItem.innerHTML = `
+                    <p>${commentText}</p>
+                    <textarea class="reply-box" placeholder="답글을 달아보세요..."></textarea>
+                    <button class="reply-btn" onclick="submitReply(this)">답글 달기</button>
+                    <div class="reply-list"></div>
+                `;
+                document.getElementById('comments-list').appendChild(commentItem);
+                document.getElementById('comment').value = ''; // 댓글 입력창 비우기
+            } else {
+                alert("댓글을 입력해주세요.");
+            }
+        }
+
+        // 답글 작성
+        function submitReply(button) {
+            var replyText = button.previousElementSibling.value.trim();
+            if (replyText) {
+                var replyItem = document.createElement('div');
+                replyItem.classList.add('comment-item');
+                replyItem.innerText = replyText;
+                button.nextElementSibling.appendChild(replyItem);
+                button.previousElementSibling.value = ''; // 답글 입력창 비우기
+            } else {
+                alert("답글을 입력해주세요.");
+            }
+        }
+    </script>
+</body>
+</html>
